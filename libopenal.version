@@ -155,6 +155,7 @@ alcGetThreadContext;
 alcIsRenderFormatSupportedSOFT;
 alcLoopbackOpenDeviceSOFT;
 alcRenderSamplesSOFT;
+alcReopenDeviceSOFT;
 alcResetDeviceSOFT;
 alcSetThreadContext;
 alDeferUpdatesSOFT;

@@ -1049,6 +1049,117 @@ auto EnumFromDevAmbi(DevAmbiScaling const scaling) -> ALCenum
         al::to_underlying(scaling))};
 }
 
+auto ValidateDeviceAttributes(DeviceType const type,
+    std::span<AttributePair const> const attrList) noexcept -> ALCenum
+{
+    constexpr auto MaxSourceCount = ALCuint{1u << 20};
+    constexpr auto MaxEffectSlotCount = ALCuint{1u << 20};
+
+    for(auto const &[attrparam, attrvalue] : attrList)
+    {
+        switch(attrparam)
+        {
+        case ALC_FREQUENCY:
+            if(attrvalue < ALCint{MinOutputRate} || attrvalue > ALCint{MaxOutputRate})
+                return ALC_INVALID_VALUE;
+            break;
+
+        case ALC_MONO_SOURCES:
+        case ALC_STEREO_SOURCES:
+            if(attrvalue < 0 || ALCuint(attrvalue) > MaxSourceCount)
+                return ALC_INVALID_VALUE;
+            break;
+
+        case ALC_MAX_AUXILIARY_SENDS:
+            if(attrvalue < 0 || ALCuint(attrvalue) > MaxSendCount)
+                return ALC_INVALID_VALUE;
+            break;
+
+        case ALC_AUXILIARY_EFFECT_SLOTS_SOFT:
+            if(attrvalue < 0 || ALCuint(attrvalue) > MaxEffectSlotCount)
+                return ALC_INVALID_VALUE;
+            break;
+
+        case ALC_FORMAT_CHANNELS_SOFT:
+            if(!DevFmtChannelsFromEnum(attrvalue))
+                return ALC_INVALID_VALUE;
+            break;
+
+        case ALC_FORMAT_TYPE_SOFT:
+            if(!DevFmtTypeFromEnum(attrvalue))
+                return ALC_INVALID_VALUE;
+            break;
+
+        case ALC_AMBISONIC_LAYOUT_SOFT:
+            if(!DevAmbiLayoutFromEnum(attrvalue))
+                return ALC_INVALID_VALUE;
+            break;
+
+        case ALC_AMBISONIC_SCALING_SOFT:
+            if(!DevAmbiScalingFromEnum(attrvalue))
+                return ALC_INVALID_VALUE;
+            break;
+
+        case ALC_AMBISONIC_ORDER_SOFT:
+            if(attrvalue < 1 || ALCuint(attrvalue) > MaxAmbiOrder)
+                return ALC_INVALID_VALUE;
+            break;
+
+        case ALC_HRTF_SOFT:
+        case ALC_OUTPUT_LIMITER_SOFT:
+            if(attrvalue != ALC_FALSE && attrvalue != ALC_TRUE
+                && attrvalue != ALC_DONT_CARE_SOFT)
+                return ALC_INVALID_VALUE;
+            break;
+
+        case ALC_OUTPUT_MODE_SOFT:
+            switch(al::Device::OutputMode{attrvalue})
+            {
+            case al::Device::OutputMode::Any:
+            case al::Device::OutputMode::Mono:
+            case al::Device::OutputMode::Stereo:
+            case al::Device::OutputMode::StereoBasic:
+            case al::Device::OutputMode::Uhj2:
+            case al::Device::OutputMode::Hrtf:
+            case al::Device::OutputMode::Quad:
+            case al::Device::OutputMode::X51:
+            case al::Device::OutputMode::X61:
+            case al::Device::OutputMode::X71:
+                break;
+            default:
+                return ALC_INVALID_VALUE;
+            }
+            break;
+
+        case ALC_REFRESH:
+        case ALC_SYNC:
+        case ALC_HRTF_ID_SOFT:
+        case ALC_CONTEXT_FLAGS_EXT:
+            break;
+
+        default:
+            return ALC_INVALID_VALUE;
+        }
+    }
+
+    if(type == DeviceType::Loopback)
+    {
+        auto hasFrequency = false;
+        auto hasChannels = false;
+        auto hasType = false;
+        for(auto const &[attrparam, attrvalue] : attrList)
+        {
+            hasFrequency |= attrparam == ALC_FREQUENCY;
+            hasChannels |= attrparam == ALC_FORMAT_CHANNELS_SOFT;
+            hasType |= attrparam == ALC_FORMAT_TYPE_SOFT;
+        }
+        if(!hasFrequency || !hasChannels || !hasType)
+            return ALC_INVALID_VALUE;
+    }
+
+    return ALC_NO_ERROR;
+}
+
 
 /* Downmixing channel arrays, to map a device format's missing channels to
  * existing ones. Based on what PipeWire does, though simplified.
@@ -1155,6 +1266,9 @@ void UpdateClockBase(al::Device& device)
 auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const attrList)
     -> ALCenum
 {
+    if(const auto err = ValidateDeviceAttributes(device.Type, attrList); err != ALC_NO_ERROR)
+        return err;
+
     if(attrList.empty() && device.Type == DeviceType::Loopback)
     {
         WARN("Missing attributes for loopback device");
@@ -1434,8 +1548,6 @@ auto UpdateDeviceParams(al::Device& device, std::span<AttributePair const> const
         if(device.Type == DeviceType::Loopback)
         {
             if(!optchans || !opttype)
-                return ALC_INVALID_VALUE;
-            if(freqAttr < int{MinOutputRate} || freqAttr > int{MaxOutputRate})
                 return ALC_INVALID_VALUE;
             if(*optchans == DevFmtAmbi3D)
             {
@@ -2082,6 +2194,22 @@ ContextRef GetContextRef() noexcept
         al::Context::sGlobalContextLock.store(false, std::memory_order_release);
     }
     return ContextRef{context};
+}
+
+ContextRef GetContextRef(ALCcontext *context) noexcept
+{
+    if(!context) [[unlikely]]
+    {
+        al::Device::SetGlobalError(ALC_INVALID_CONTEXT);
+        return {};
+    }
+
+    try {
+        return VerifyContext(context).get();
+    }
+    catch(al::base_exception&) {
+        return {};
+    }
 }
 
 /************************************************
@@ -2904,6 +3032,12 @@ try {
             break;
         }
     }
+    constexpr auto ValidContextFlags = ContextFlagBitset{1u << DebugBit};
+    if((ctxflags & ~ValidContextFlags).any())
+    {
+        dev->setError(ALC_INVALID_VALUE);
+        return nullptr;
+    }
 
     auto context = al::Context::Create(dev, ctxflags);
 
@@ -2951,6 +3085,12 @@ try {
         ContextList.emplace(iter, context.get());
         listlock.unlock();
     }
+
+    /* Low-severity debug messages are disabled by default. Do this after the
+     * context is registered so direct-context validation can find it.
+     */
+    alDebugMessageControlDirectEXT(context.get(), AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
+        AL_DEBUG_SEVERITY_LOW_EXT, 0, nullptr, AL_FALSE);
 
     if(auto *slot = context->mDefaultSlot.get())
     {
@@ -3283,6 +3423,11 @@ try {
         al::Device::SetGlobalError(ALC_INVALID_VALUE);
         return nullptr;
     }
+    if(frequency < MinOutputRate || frequency > MaxOutputRate)
+    {
+        al::Device::SetGlobalError(ALC_INVALID_VALUE);
+        return nullptr;
+    }
 
     auto devname = deviceName ? std::string_view{deviceName} : std::string_view{};
     if(!devname.empty())
@@ -3591,18 +3736,16 @@ DefineAlcAlias(alcIsRenderFormatSupportedSOFT)
 ALC_API void ALC_APIENTRY alcRenderSamplesSOFT(ALCdevice *device, ALCvoid *buffer,
     ALCsizei samples) noexcept
 {
-    if(!device) [[unlikely]]
-        return al::Device::SetGlobalError(ALC_INVALID_DEVICE);
-    /* NOLINTBEGIN(cppcoreguidelines-pro-type-static-cast-downcast)
-     * Needs to be real-time safe, so can't do full validation.
-     */
-    auto const dev = gsl::make_not_null(static_cast<al::Device*>(device));
-    /* NOLINTEND(cppcoreguidelines-pro-type-static-cast-downcast) */
-    if(dev->Type != DeviceType::Loopback) [[unlikely]]
-        return dev->setError(ALC_INVALID_DEVICE);
-    if(samples < 0 || (samples > 0 && buffer == nullptr)) [[unlikely]]
-        return dev->setError(ALC_INVALID_VALUE);
-    dev->renderSamples(buffer, gsl::narrow_cast<ALCuint>(samples), dev->channelsFromFmt());
+    try {
+        auto dev = VerifyDevice(device);
+        if(dev->Type != DeviceType::Loopback) [[unlikely]]
+            return dev->setError(ALC_INVALID_DEVICE);
+        if(samples < 0 || (samples > 0 && buffer == nullptr)) [[unlikely]]
+            return dev->setError(ALC_INVALID_VALUE);
+        dev->renderSamples(buffer, gsl::narrow_cast<ALCuint>(samples), dev->channelsFromFmt());
+    }
+    catch(al::base_exception&) {
+    }
 }
 DefineAlcAlias(alcRenderSamplesSOFT)
 
@@ -3725,6 +3868,13 @@ try {
     auto statelock = std::lock_guard{dev->StateLock};
     listlock.unlock();
 
+    const auto attrSpan = SpanFromAttributeList(attribs);
+    if(const auto err = ValidateDeviceAttributes(dev->Type, attrSpan); err != ALC_NO_ERROR)
+    {
+        dev->setError(err);
+        return ALC_FALSE;
+    }
+
     /* Force the backend to stop mixing first since we're resetting. Also reset
      * the connected state so lost devices can attempt recover.
      */
@@ -3734,7 +3884,7 @@ try {
         dev->mDeviceState = DeviceState::Configured;
     }
 
-    return ResetDeviceParams(*dev, SpanFromAttributeList(attribs)) ? ALC_TRUE : ALC_FALSE;
+    return ResetDeviceParams(*dev, attrSpan) ? ALC_TRUE : ALC_FALSE;
 }
 catch(al::base_exception&) {
     return ALC_FALSE;
@@ -3747,14 +3897,20 @@ DefineAlcAlias(alcResetDeviceSOFT)
  ************************************************/
 
 /** Reopens the given device output, using the specified name and attribute list. */
-FORCE_ALIGN auto ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device, const ALCchar *deviceName,
-    const ALCint *attribs) noexcept -> ALCboolean
+ALC_API FORCE_ALIGN auto ALC_APIENTRY alcReopenDeviceSOFT(ALCdevice *device,
+    const ALCchar *deviceName, const ALCint *attribs) noexcept -> ALCboolean
 try {
     auto listlock = std::unique_lock{ListLock};
     auto dev = VerifyDevice(device);
     if(dev->Type != DeviceType::Playback)
     {
         dev->setError(ALC_INVALID_DEVICE);
+        return ALC_FALSE;
+    }
+    const auto attrSpan = SpanFromAttributeList(attribs);
+    if(const auto err = ValidateDeviceAttributes(dev->Type, attrSpan); err != ALC_NO_ERROR)
+    {
+        dev->setError(err);
         return ALC_FALSE;
     }
     auto statelock = std::lock_guard{dev->StateLock};
@@ -3837,19 +3993,11 @@ try {
         TRACE("Overriding renderer string: \"{}\"", dev->mRendererOverride);
     }
 
-    /* Always return true even if resetting fails. It shouldn't fail, but this
-     * is primarily to avoid confusion by the app seeing the function return
-     * false while the device is on the new output anyway. We could try to
-     * restore the old backend if this fails, but the configuration would be
-     * changed with the new backend and would need to be reset again with the
-     * old one, and the provided attributes may not be appropriate or desirable
-     * for the old device.
-     *
-     * In this way, we essentially act as if the function succeeded, but
-     * immediately disconnects following it.
+    /* Attributes were validated before the backend was replaced. If the reset
+     * still fails, return the failure so the caller knows the device isn't
+     * ready for playback.
      */
-    ResetDeviceParams(*dev, SpanFromAttributeList(attribs));
-    return ALC_TRUE;
+    return ResetDeviceParams(*dev, attrSpan) ? ALC_TRUE : ALC_FALSE;
 }
 catch(std::bad_alloc&) {
     WARN("Caught bad_alloc exception while reopening device");

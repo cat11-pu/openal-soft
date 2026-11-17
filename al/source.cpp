@@ -2755,6 +2755,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Generating {} sources", n);
     if(n <= 0) [[unlikely]] return;
+    if(!sources)
+        context.throw_error(AL_INVALID_VALUE, "NULL source array");
 
     auto const srclock = std::unique_lock{context.mSourceLock};
     auto const& device = *context.mALDevice;
@@ -2781,11 +2783,18 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Deleting {} sources", n);
     if(n <= 0) [[unlikely]] return;
+    if(!sources)
+        context.throw_error(AL_INVALID_VALUE, "NULL source array");
 
     auto srclock = std::lock_guard{context.mSourceLock};
 
     /* Check that all Sources are valid */
     const auto sids = std::views::counted(sources, n);
+    for(auto iter = sids.begin(); iter != sids.end(); ++iter)
+    {
+        if(std::ranges::find(iter + 1, sids.end(), *iter) != sids.end())
+            context.throw_error(AL_INVALID_NAME, "Duplicate source ID {}", *iter);
+    }
     std::ranges::for_each(sids, [&context](const ALuint sid)
     { std::ignore = LookupSource(context, sid); });
 
@@ -3230,6 +3239,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Playing {} sources", n);
     if(n <= 0) [[unlikely]] return;
+    if(!sources)
+        context.throw_error(AL_INVALID_VALUE, "NULL source array");
 
     const auto sids = std::views::counted(sources, n);
     auto source_store = source_store_variant{};
@@ -3262,6 +3273,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Playing {} sources", n);
     if(n <= 0) [[unlikely]] return;
+    if(!sources)
+        context.throw_error(AL_INVALID_VALUE, "NULL source array");
 
     if(start_time < 0)
         context.throw_error(AL_INVALID_VALUE, "Invalid time point {}", start_time);
@@ -3301,6 +3314,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Pausing {} sources", n);
     if(n <= 0) [[unlikely]] return;
+    if(!sources)
+        context.throw_error(AL_INVALID_VALUE, "NULL source array");
 
     const auto sids = std::views::counted(sources, n);
     auto source_store = source_store_variant{};
@@ -3362,6 +3377,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Stopping {} sources", n);
     if(n <= 0) [[unlikely]] return;
+    if(!sources)
+        context.throw_error(AL_INVALID_VALUE, "NULL source array");
 
     const auto sids = std::views::counted(sources, n);
     auto source_store = source_store_variant{};
@@ -3411,6 +3428,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Rewinding {} sources", n);
     if(n <= 0) [[unlikely]] return;
+    if(!sources)
+        context.throw_error(AL_INVALID_VALUE, "NULL source array");
 
     const auto sids = std::views::counted(sources, n);
     auto source_store = source_store_variant{};
@@ -3462,6 +3481,8 @@ try {
     if(nb < 0)
         context.throw_error(AL_INVALID_VALUE, "Queueing {} buffers", nb);
     if(nb <= 0) [[unlikely]] return;
+    if(!buffers)
+        context.throw_error(AL_INVALID_VALUE, "NULL buffer array");
 
     auto srclock = std::lock_guard{context.mSourceLock};
     auto& source = LookupSource(context, src);
@@ -3576,6 +3597,8 @@ try {
     if(nb < 0)
         context.throw_error(AL_INVALID_VALUE, "Unqueueing {} buffers", nb);
     if(nb <= 0) [[unlikely]] return;
+    if(!buffers)
+        context.throw_error(AL_INVALID_VALUE, "NULL buffer array");
 
     auto srclock = std::lock_guard{context.mSourceLock};
 

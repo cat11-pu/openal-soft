@@ -24,6 +24,10 @@ constexpr auto DefaultVal() noexcept -> T
 #define DefineFuncAlias(Name)
 #endif
 
+#define DECL_GET_CONTEXT(R)                                                   \
+    auto const ctx = GetContextRef(context);                                  \
+    if(!ctx) [[unlikely]] return detail::DefaultVal<R>()
+
 #define DECL_FUNC1(ATTR, R, Name, T1,n1)                                      \
 ATTR auto AL_APIENTRY Name(T1 n1) noexcept -> R                               \
 {                                                                             \
@@ -35,7 +39,8 @@ DefineFuncAlias(Name)                                                         \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1) noexcept\
     -> R                                                                      \
 {                                                                             \
-    return Name##_(*al::verify_context(context), n1);                         \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##_(*ctx, n1);                                                 \
 }                                                                             \
 DefineFuncAlias(Name##Direct)
 
@@ -50,7 +55,8 @@ DefineFuncAlias(Name)                                                         \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2)  \
     noexcept -> R                                                             \
 {                                                                             \
-    return Name##_(*al::verify_context(context), n1, n2);                     \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##_(*ctx, n1, n2);                                             \
 }                                                                             \
 DefineFuncAlias(Name##Direct)
 
@@ -65,7 +71,8 @@ DefineFuncAlias(Name)                                                         \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2,  \
     T3 n3) noexcept -> R                                                      \
 {                                                                             \
-    return Name##_(*al::verify_context(context), n1, n2, n3);                 \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##_(*ctx, n1, n2, n3);                                         \
 }                                                                             \
 DefineFuncAlias(Name##Direct)
 
@@ -80,7 +87,8 @@ DefineFuncAlias(Name)                                                         \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2,  \
     T3 n3, T4 n4) noexcept -> R                                               \
 {                                                                             \
-    return Name##_(*al::verify_context(context), n1, n2, n3, n4);             \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##_(*ctx, n1, n2, n3, n4);                                     \
 }                                                                             \
 DefineFuncAlias(Name##Direct)
 
@@ -95,7 +103,8 @@ DefineFuncAlias(Name)                                                         \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct(ALCcontext *context, T1 n1, T2 n2,  \
     T3 n3, T4 n4, T5 n5) noexcept -> R                                        \
 {                                                                             \
-    return Name##_(*al::verify_context(context), n1, n2, n3, n4, n5);         \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##_(*ctx, n1, n2, n3, n4, n5);                                 \
 }                                                                             \
 DefineFuncAlias(Name##Direct)
 
@@ -116,7 +125,8 @@ DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context) noexcept  \
     -> R                                                                      \
 {                                                                             \
-    return Name##Ext##_(*al::verify_context(context));                        \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##Ext##_(*ctx);                                                \
 }                                                                             \
 DefineFuncAlias(Name##Direct##Ext)
 
@@ -131,7 +141,8 @@ DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1)    \
     noexcept -> R                                                             \
 {                                                                             \
-    return Name##Ext##_(*al::verify_context(context), n1);                    \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##Ext##_(*ctx, n1);                                            \
 }                                                                             \
 DefineFuncAlias(Name##Direct##Ext)
 
@@ -146,7 +157,8 @@ DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2) noexcept -> R                                                      \
 {                                                                             \
-    return Name##Ext##_(*al::verify_context(context), n1, n2);                \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##Ext##_(*ctx, n1, n2);                                        \
 }                                                                             \
 DefineFuncAlias(Name##Direct##Ext)
 
@@ -161,7 +173,8 @@ DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2, T3 n3) noexcept -> R                                               \
 {                                                                             \
-    return Name##Ext##_(*al::verify_context(context), n1, n2, n3);            \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##Ext##_(*ctx, n1, n2, n3);                                    \
 }                                                                             \
 DefineFuncAlias(Name##Direct##Ext)
 
@@ -176,7 +189,8 @@ DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2, T3 n3, T4 n4) noexcept -> R                                        \
 {                                                                             \
-    return Name##Ext##_(*al::verify_context(context), n1, n2, n3, n4);        \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##Ext##_(*ctx, n1, n2, n3, n4);                                \
 }                                                                             \
 DefineFuncAlias(Name##Direct##Ext)
 
@@ -192,7 +206,8 @@ DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2, T3 n3, T4 n4, T5 n5) noexcept -> R                                 \
 {                                                                             \
-    return Name##Ext##_(*al::verify_context(context), n1, n2, n3, n4, n5);    \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##Ext##_(*ctx, n1, n2, n3, n4, n5);                            \
 }                                                                             \
 DefineFuncAlias(Name##Direct##Ext)
 
@@ -209,7 +224,8 @@ DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2, T3 n3, T4 n4, T5 n5, T6 n6) noexcept -> R                          \
 {                                                                             \
-    return Name##Ext##_(*al::verify_context(context), n1, n2, n3, n4, n5, n6);\
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##Ext##_(*ctx, n1, n2, n3, n4, n5, n6);                        \
 }                                                                             \
 DefineFuncAlias(Name##Direct##Ext)
 
@@ -226,8 +242,8 @@ DefineFuncAlias(Name##Ext)                                                    \
 FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context, T1 n1,    \
     T2 n2, T3 n3, T4 n4, T5 n5, T6 n6, T7 n7, T8 n8) noexcept -> R            \
 {                                                                             \
-    return Name##Ext##_(*al::verify_context(context), n1, n2, n3, n4, n5, n6, \
-        n7, n8);                                                              \
+    DECL_GET_CONTEXT(R);                                                      \
+    return Name##Ext##_(*ctx, n1, n2, n3, n4, n5, n6, n7, n8);                \
 }                                                                             \
 DefineFuncAlias(Name##Direct##Ext)
 

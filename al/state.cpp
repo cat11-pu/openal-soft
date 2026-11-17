@@ -552,7 +552,8 @@ FORCE_ALIGN auto AL_APIENTRY Name##Direct##Ext(ALCcontext *context,           \
     ALenum pname) noexcept -> R                                               \
 {                                                                             \
     auto value = R{};                                                         \
-    GetValue(*al::verify_context(context), pname, &value);                    \
+    if(auto const ctx = GetContextRef(context))                               \
+        GetValue(*ctx, pname, &value);                                        \
     return value;                                                             \
 }                                                                             \
 DefineFuncAlias(Name##Direct##Ext)                                            \
@@ -566,7 +567,8 @@ DefineFuncAlias(Name##v##Ext)                                                 \
 FORCE_ALIGN auto AL_APIENTRY Name##v##Direct##Ext(ALCcontext *context,        \
     ALenum pname, R *values) noexcept -> void                                 \
 {                                                                             \
-    GetValue(*al::verify_context(context), pname, values);                    \
+    if(auto const ctx = GetContextRef(context))                               \
+        GetValue(*ctx, pname, values);                                        \
 }                                                                             \
 DefineFuncAlias(Name##v##Direct##Ext)
 

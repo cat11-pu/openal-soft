@@ -170,11 +170,7 @@ Context::Context(gsl::not_null<intrusive_ptr<Device>> const &device, ContextFlag
     : ContextBase{*device}, mALDevice{device}, mContextFlags{flags}
     , mDebugEnabled{flags.test(ContextFlags::DebugBit)}
     , mDebugGroups{{DebugSource::Other, 0, std::string{}}}
-{
-    /* Low-severity debug messages are disabled by default. */
-    alDebugMessageControlDirectEXT(this, AL_DONT_CARE_EXT, AL_DONT_CARE_EXT,
-        AL_DEBUG_SEVERITY_LOW_EXT, 0, nullptr, AL_FALSE);
-}
+{ }
 
 Context::~Context()
 {

@@ -769,6 +769,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Generating {} buffers", n);
     if(n <= 0) [[unlikely]] return;
+    if(!buffers)
+        context.throw_error(AL_INVALID_VALUE, "NULL buffer array");
 
     auto& device = *context.mALDevice;
     auto const buflock = std::lock_guard{device.BufferLock};
@@ -791,6 +793,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Deleting {} buffers", n);
     if(n <= 0) [[unlikely]] return;
+    if(!buffers)
+        context.throw_error(AL_INVALID_VALUE, "NULL buffer array");
 
     auto& device = *context.mALDevice;
     auto const buflock = std::lock_guard{device.BufferLock};
@@ -864,8 +868,15 @@ catch(std::exception &e) {
 
 void alBufferData_(al::Context& context, ALuint const buffer, ALenum const format,
     void const *const data, ALsizei const size, ALsizei const freq) noexcept
-{
+try {
+    if(size > 0 && !data)
+        context.throw_error(AL_INVALID_VALUE, "NULL data with non-zero size");
     alBufferStorageSOFT_(context, buffer, format, data, size, freq, 0);
+}
+catch(al::base_exception&) {
+}
+catch(std::exception &e) {
+    ERR("Caught exception: {}", e.what());
 }
 
 void alBufferDataStatic_(al::Context& context, ALuint const buffer, ALenum const format,
@@ -879,6 +890,8 @@ try {
         context.throw_error(AL_INVALID_VALUE, "Negative storage size {}", size);
     if(freq < 1)
         context.throw_error(AL_INVALID_VALUE, "Invalid sample rate {}", freq);
+    if(size > 0 && !data)
+        context.throw_error(AL_INVALID_VALUE, "NULL data with non-zero size");
 
     auto const usrfmt = DecomposeUserFormat(format);
     if(!usrfmt)
@@ -954,6 +967,8 @@ try {
     if(offset < 0 || length < 0)
         context.throw_error(AL_INVALID_VALUE, "Invalid data sub-range {} + {} on buffer {}",
             offset, length, buffer);
+    if(length > 0 && !data)
+        context.throw_error(AL_INVALID_VALUE, "NULL data with non-zero length");
     auto const uoffset = gsl::narrow<std::size_t>(offset);
     auto const ulength = gsl::narrow<std::size_t>(length);
     if(uoffset > albuf.mOriginalSize || ulength > albuf.mOriginalSize - uoffset)

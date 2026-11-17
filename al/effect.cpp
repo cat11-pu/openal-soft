@@ -219,6 +219,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Generating {} effects", n);
     if(n <= 0) [[unlikely]] return;
+    if(!effects)
+        context.throw_error(AL_INVALID_VALUE, "NULL effect array");
 
     auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
@@ -241,6 +243,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Deleting {} effects", n);
     if(n <= 0) [[unlikely]] return;
+    if(!effects)
+        context.throw_error(AL_INVALID_VALUE, "NULL effect array");
 
     auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
@@ -310,6 +314,9 @@ catch(std::exception &e) {
 
 void alEffectiv_(al::Context& context, ALuint effect, ALenum param, const ALint *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     switch(param)
     {
     case AL_EFFECT_TYPE:
@@ -357,6 +364,9 @@ catch(std::exception &e) {
 
 void alEffectfv_(al::Context& context, ALuint effect, ALenum param, const ALfloat *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
@@ -377,6 +387,9 @@ catch(std::exception &e) {
 
 void alGetEffecti_(al::Context& context, ALuint effect, ALenum param, ALint *value) noexcept
 try {
+    if(!value)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
@@ -401,6 +414,9 @@ catch(std::exception &e) {
 
 void alGetEffectiv_(al::Context& context, ALuint effect, ALenum param, ALint *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     switch(param)
     {
     case AL_EFFECT_TYPE:
@@ -428,6 +444,9 @@ catch(std::exception &e) {
 
 void alGetEffectf_(al::Context& context, ALuint effect, ALenum param, ALfloat *value) noexcept
 try {
+    if(!value)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 
@@ -448,6 +467,9 @@ catch(std::exception &e) {
 
 void alGetEffectfv_(al::Context& context, ALuint effect, ALenum param, ALfloat *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     auto& device = *context.mALDevice;
     auto const effectlock = std::lock_guard{device.EffectLock};
 

@@ -16,6 +16,7 @@ target_link_libraries(OpenAL_Tests PRIVATE
 )
 
 target_sources(OpenAL_Tests PRIVATE
+audio_stability.t.cpp
 example.t.cpp
 )
 

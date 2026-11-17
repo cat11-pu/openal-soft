@@ -382,6 +382,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Generating {} filters", n);
     if(n <= 0) [[unlikely]] return;
+    if(!filters)
+        context.throw_error(AL_INVALID_VALUE, "NULL filter array");
 
     auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
@@ -404,6 +406,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Deleting {} filters", n);
     if(n <= 0) [[unlikely]] return;
+    if(!filters)
+        context.throw_error(AL_INVALID_VALUE, "NULL filter array");
 
     auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
@@ -465,6 +469,9 @@ catch(std::exception &e) {
 
 void alFilteriv_(al::Context& context, ALuint filter, ALenum param, const ALint *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     switch(param)
     {
     case AL_FILTER_TYPE:
@@ -506,6 +513,9 @@ catch(std::exception &e) {
 
 void alFilterfv_(al::Context& context, ALuint filter, ALenum param, const ALfloat *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
@@ -523,6 +533,9 @@ catch(std::exception &e) {
 
 void alGetFilteri_(al::Context& context, ALuint filter, ALenum param, ALint *value) noexcept
 try {
+    if(!value)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
@@ -545,6 +558,9 @@ catch(std::exception &e) {
 
 void alGetFilteriv_(al::Context& context, ALuint filter, ALenum param, ALint *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     switch(param)
     {
     case AL_FILTER_TYPE:
@@ -569,6 +585,9 @@ catch(std::exception &e) {
 
 void alGetFilterf_(al::Context& context, ALuint filter, ALenum param, ALfloat *value) noexcept
 try {
+    if(!value)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 
@@ -586,6 +605,9 @@ catch(std::exception &e) {
 
 void alGetFilterfv_(al::Context& context, ALuint filter, ALenum param, ALfloat *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     auto& device = *context.mALDevice;
     auto const filterlock = std::lock_guard{device.FilterLock};
 

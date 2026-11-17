@@ -370,22 +370,9 @@ private:
 using ContextRef = al::intrusive_ptr<al::Context>;
 
 auto GetContextRef() noexcept -> ContextRef;
+auto GetContextRef(ALCcontext *context) noexcept -> ContextRef;
 
 void UpdateContextProps(al::Context &context);
-
-namespace al {
-
-inline auto verify_context(ALCcontext *context) -> gsl::not_null<al::Context*>
-{
-    /* TODO: A debug/non-optimized build should essentially do
-     * al::get_not_null(VerifyContext(context)) to ensure the ALCcontext handle
-     * is valid, not just non-null.
-     */
-    /* NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast) */
-    return gsl::make_not_null(static_cast<al::Context*>(context));
-}
-
-}
 
 inline constinit auto TrapALError = false;
 

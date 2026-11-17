@@ -357,6 +357,8 @@ try {
     if(n < 0)
         context.throw_error(AL_INVALID_VALUE, "Generating {} effect slots", n);
     if(n <= 0) [[unlikely]] return;
+    if(!effectslots)
+        context.throw_error(AL_INVALID_VALUE, "NULL effect slot array");
 
     auto slotlock = std::lock_guard{context.mEffectSlotLock};
     auto& device = *context.mALDevice;
@@ -407,6 +409,8 @@ try {
     if(n < 0) [[unlikely]]
         context.throw_error(AL_INVALID_VALUE, "Deleting {} effect slots", n);
     if(n <= 0) [[unlikely]] return;
+    if(!effectslots)
+        context.throw_error(AL_INVALID_VALUE, "NULL effect slot array");
 
     auto slotlock = std::lock_guard{context.mEffectSlotLock};
     if(n == 1)
@@ -621,6 +625,9 @@ catch(std::exception &e) {
 void alAuxiliaryEffectSlotiv_(al::Context& context, ALuint effectslot, ALenum param,
     const ALint *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     switch(param)
     {
     case AL_EFFECTSLOT_EFFECT:
@@ -675,6 +682,9 @@ catch(std::exception &e) {
 void alAuxiliaryEffectSlotfv_(al::Context& context, ALuint effectslot, ALenum param,
     const ALfloat *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     switch(param)
     {
     case AL_EFFECTSLOT_GAIN:
@@ -698,6 +708,9 @@ catch(std::exception &e) {
 void alGetAuxiliaryEffectSloti_(al::Context& context, ALuint effectslot, ALenum param,
     ALint *value) noexcept
 try {
+    if(!value)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     const auto slotlock = std::lock_guard{context.mEffectSlotLock};
 
     auto& slot = LookupEffectSlot(context, effectslot);
@@ -738,6 +751,9 @@ catch(std::exception &e) {
 void alGetAuxiliaryEffectSlotiv_(al::Context& context, ALuint effectslot, ALenum param,
     ALint *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     switch(param)
     {
     case AL_EFFECTSLOT_EFFECT:
@@ -763,6 +779,9 @@ catch(std::exception &e) {
 void alGetAuxiliaryEffectSlotf_(al::Context& context, ALuint effectslot, ALenum param,
     ALfloat *value) noexcept
 try {
+    if(!value)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     const auto slotlock = std::lock_guard{context.mEffectSlotLock};
 
     auto& slot = LookupEffectSlot(context, effectslot);
@@ -783,6 +802,9 @@ catch(std::exception &e) {
 void alGetAuxiliaryEffectSlotfv_(al::Context& context, ALuint effectslot, ALenum param,
     ALfloat *values) noexcept
 try {
+    if(!values)
+        context.throw_error(AL_INVALID_VALUE, "NULL pointer");
+
     switch(param)
     {
     case AL_EFFECTSLOT_GAIN:

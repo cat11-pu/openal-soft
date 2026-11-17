@@ -357,6 +357,9 @@ catch(std::exception &e) {
 void alPushDebugGroupEXT_(al::Context& context, ALenum source, ALuint id, ALsizei length,
     const ALchar *message) noexcept
 try {
+    if(!message)
+        context.throw_error(AL_INVALID_VALUE, "Null message pointer");
+
     if(length < 0)
     {
         const auto newlen = std::strlen(message);

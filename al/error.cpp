@@ -154,6 +154,8 @@ DefineFuncAlias(alGetError)
 
 FORCE_ALIGN auto AL_APIENTRY alGetErrorDirect(ALCcontext *context) noexcept -> ALenum
 {
-    return alGetError_(*al::verify_context(context));
+    auto const ctx = GetContextRef(context);
+    if(!ctx) [[unlikely]] return AL_INVALID_OPERATION;
+    return alGetError_(*ctx);
 }
 DefineFuncAlias(alGetErrorDirect)
