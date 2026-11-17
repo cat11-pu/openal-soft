@@ -6,5 +6,11 @@
 
 #cmakedefine01 HAVE_SSE_INTRINSICS
 
+/* Define to 1 if we have AVX2 CPU extensions, else 0 */
+#cmakedefine01 HAVE_AVX2
+
+/* Define to 1 if we have AVX512F CPU extensions, else 0 */
+#cmakedefine01 HAVE_AVX512
+
 /* Define to 1 if we have ARM Neon CPU extensions, else 0 */
 #cmakedefine01 HAVE_NEON

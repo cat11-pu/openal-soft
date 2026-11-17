@@ -1,0 +1,6 @@
+#ifndef BENCH_GEN_CONFIG_H
+#define BENCH_GEN_CONFIG_H
+
+#define HAVE_CXXMODULES 0
+
+#endif

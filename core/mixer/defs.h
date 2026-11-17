@@ -141,6 +141,14 @@ DECL_RESAMPLER(Cubic, SSE2)
 DECL_RESAMPLER(Linear, SSE4)
 DECL_RESAMPLER(Cubic, SSE4)
 #endif
+#if HAVE_AVX2
+DECL_HRTF_MIXER(AVX2)
+#endif
+#if HAVE_AVX512
+void MixHrtf_AVX512(std::span<float const> InSamples, std::span<f32x2> AccumSamples,
+    unsigned IrSize, MixHrtfFilter const *hrtfparams, std::size_t SamplesToDo) noexcept
+    NONBLOCKING;
+#endif
 
 #undef DECL_HRTF_MIXER
 #undef DECL_MIXER

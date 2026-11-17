@@ -56,45 +56,21 @@ void ApplyCoeffs(std::span<f32x2> const Values, std::size_t const IrSize,
      */
     auto const count4 = (IrSize+1) >> 1;
 
-    /* NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
-     * This isn't technically correct to test alignment, but it's true for
-     * systems that support SSE, which is the only one that needs to know the
-     * alignment of Values (which alternates between 8- and 16-byte aligned).
+    /* Use unaligned accesses uniformly: the accumulator alternates between
+     * 8- and 16-byte alignment per sample, and on any remotely modern CPU an
+     * unaligned access on aligned data costs the same as an aligned one. This
+     * removes the per-sample alignment branch (and the shuffle-based
+     * misaligned path) while keeping the exact same multiply-then-add order,
+     * so results stay bit-identical.
      */
-    if(!(reinterpret_cast<uintptr_t>(Values.data())&15))
+    auto *const valp = Values[0].data();
+    auto const *const coefp = Coeffs[0].data();
+    for(auto i = 0_uz;i < count4;++i)
     {
-        auto const vals4 = std::span{reinterpret_cast<__m128*>(Values[0].data()), count4};
-        auto const coeffs4 = std::span{reinterpret_cast<const __m128*>(Coeffs[0].data()), count4};
-
-        std::ranges::transform(vals4, coeffs4, vals4.begin(),
-            [lrlr](__m128 const &val, __m128 const &coeff) -> __m128
-            { return vmadd(val, coeff, lrlr); });
+        auto const vals = _mm_loadu_ps(valp + i*4);
+        auto const coeffs = _mm_loadu_ps(coefp + i*4);
+        _mm_storeu_ps(valp + i*4, vmadd(vals, coeffs, lrlr));
     }
-    else
-    {
-        auto coeffs = _mm_load_ps(Coeffs[0].data());
-        auto vals = _mm_loadl_pi(_mm_setzero_ps(), reinterpret_cast<__m64*>(Values[0].data()));
-        auto imp0 = _mm_mul_ps(lrlr, coeffs);
-        vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi(reinterpret_cast<__m64*>(Values[0].data()), vals);
-        auto td = count4 - 1_uz;
-        auto i = 1_uz;
-        do {
-            coeffs = _mm_load_ps(Coeffs[i+1].data());
-            vals = _mm_load_ps(Values[i].data());
-            auto const imp1 = _mm_mul_ps(lrlr, coeffs);
-            imp0 = _mm_shuffle_ps(imp0, imp1, _MM_SHUFFLE(1, 0, 3, 2));
-            vals = _mm_add_ps(imp0, vals);
-            _mm_store_ps(Values[i].data(), vals);
-            imp0 = imp1;
-            i += 2;
-        } while(--td);
-        vals = _mm_loadl_pi(vals, reinterpret_cast<__m64*>(Values[i].data()));
-        imp0 = _mm_movehl_ps(imp0, imp0);
-        vals = _mm_add_ps(imp0, vals);
-        _mm_storel_pi(reinterpret_cast<__m64*>(Values[i].data()), vals);
-    }
-    /* NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast) */
 }
 
 force_inline void MixLine(std::span<float const> const InSamples, std::span<float> const dst,

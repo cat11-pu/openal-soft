@@ -148,6 +148,10 @@ constinit auto MixDirectHrtf = HrtfDirectMixerFunc{MixDirectHrtf_C};
 [[nodiscard]]
 auto SelectHrtfMixer() -> HrtfDirectMixerFunc
 {
+#if HAVE_AVX2
+    if(CPUCapFlags.test(CPUCap::AVX2))
+        return MixDirectHrtf_AVX2;
+#endif
 #if HAVE_NEON
     if(CPUCapFlags.test(CPUCap::NEON))
         return MixDirectHrtf_NEON;

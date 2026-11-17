@@ -545,12 +545,14 @@ check_include_file(xmmintrin.h HAVE_XMMINTRIN_H)
 check_include_file(emmintrin.h HAVE_EMMINTRIN_H)
 check_include_file(pmmintrin.h HAVE_PMMINTRIN_H)
 check_include_file(smmintrin.h HAVE_SMMINTRIN_H)
+check_include_file(immintrin.h HAVE_IMMINTRIN_H)
 check_include_file(arm_neon.h HAVE_ARM_NEON_H)
 
 set(HAVE_SSE        0)
 set(HAVE_SSE2       0)
 set(HAVE_SSE3       0)
 set(HAVE_SSE4_1     0)
+set(HAVE_AVX2       0)
 set(HAVE_NEON       0)
 
 # Check for SSE support
@@ -588,6 +590,51 @@ if(ALSOFT_CPUEXT_SSE4_1 AND HAVE_SSE3 AND HAVE_SMMINTRIN_H)
 endif()
 if(ALSOFT_REQUIRE_SSE4_1 AND NOT HAVE_SSE4_1)
     message(FATAL_ERROR "Failed to enable required SSE4.1 CPU extensions")
+endif()
+
+# Check for AVX2 support
+option(ALSOFT_CPUEXT_AVX2 "Enable AVX2 support" ON)
+option(ALSOFT_REQUIRE_AVX2 "Require AVX2 support" OFF)
+if(ALSOFT_CPUEXT_AVX2 AND HAVE_SSE AND HAVE_IMMINTRIN_H)
+    check_c_source_compiles("#include <immintrin.h>
+        #if defined(__GNUC__) && !defined(__clang__) && !defined(__AVX2__)
+        #pragma GCC target(\"avx2\")
+        #endif
+        int main()
+        {
+            __m256 v = _mm256_setzero_ps();
+            v = _mm256_add_ps(v, _mm256_mul_ps(v, v));
+            return (int)_mm_cvtss_f32(_mm256_castps256_ps128(v));
+        }" HAVE_AVX2_INTRINSICS)
+    if(HAVE_AVX2_INTRINSICS)
+        set(HAVE_AVX2 1)
+    endif()
+endif()
+if(ALSOFT_REQUIRE_AVX2 AND NOT HAVE_AVX2)
+    message(FATAL_ERROR "Failed to enable required AVX2 CPU extensions")
+endif()
+
+# Check for AVX512F support
+set(HAVE_AVX512 0)
+option(ALSOFT_CPUEXT_AVX512 "Enable AVX512F support" ON)
+option(ALSOFT_REQUIRE_AVX512 "Require AVX512F support" OFF)
+if(ALSOFT_CPUEXT_AVX512 AND HAVE_SSE AND HAVE_IMMINTRIN_H)
+    check_c_source_compiles("#include <immintrin.h>
+        #if defined(__GNUC__) && !defined(__clang__) && !defined(__AVX512F__)
+        #pragma GCC target(\"avx512f\")
+        #endif
+        int main()
+        {
+            __m512 v = _mm512_setzero_ps();
+            v = _mm512_add_ps(v, _mm512_mul_ps(v, v));
+            return (int)_mm512_cvtss_f32(v);
+        }" HAVE_AVX512_INTRINSICS)
+    if(HAVE_AVX512_INTRINSICS)
+        set(HAVE_AVX512 1)
+    endif()
+endif()
+if(ALSOFT_REQUIRE_AVX512 AND NOT HAVE_AVX512)
+    message(FATAL_ERROR "Failed to enable required AVX512F CPU extensions")
 endif()
 
 # Check for ARM Neon support
@@ -1083,6 +1130,14 @@ endif()
 if(HAVE_SSE4_1)
     list(APPEND CORE_SRCS core/mixer/mixer_sse41.cpp)
     set(CPU_EXTS "${CPU_EXTS}, SSE4.1")
+endif()
+if(HAVE_AVX2)
+    list(APPEND CORE_SRCS core/mixer/mixer_avx2.cpp)
+    set(CPU_EXTS "${CPU_EXTS}, AVX2")
+endif()
+if(HAVE_AVX512)
+    list(APPEND CORE_SRCS core/mixer/mixer_avx512.cpp)
+    set(CPU_EXTS "${CPU_EXTS}, AVX512F")
 endif()
 if(HAVE_NEON)
     list(APPEND CORE_SRCS core/mixer/mixer_neon.cpp)

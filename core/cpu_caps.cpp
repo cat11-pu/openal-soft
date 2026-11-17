@@ -21,6 +21,7 @@
 #include <array>
 #include <bit>
 #include <cctype>
+#include <cstdint>
 #include <ranges>
 #include <string>
 
@@ -50,6 +51,22 @@ inline auto get_cpuid(unsigned int f) -> std::array<reg_type,4>
 }
 #define CAN_GET_CPUID
 #endif
+
+#if defined(CAN_GET_CPUID) && (HAVE_AVX2 || HAVE_AVX512)
+#if defined(HAVE_GCC_GET_CPUID)
+inline auto get_xcr0() -> std::uint64_t
+{
+    auto eax = 0u, edx = 0u;
+    __asm__ volatile("xgetbv" : "=a"(eax), "=d"(edx) : "c"(0));
+    return eax | (std::uint64_t{edx} << 32);
+}
+#elif defined(HAVE_CPUID_INTRINSIC) && defined(_MSC_VER)
+#include <immintrin.h>
+inline auto get_xcr0() -> std::uint64_t
+{ return static_cast<std::uint64_t>(_xgetbv(0)); }
+#endif
+#define CAN_GET_XCR0
+#endif /* CAN_GET_CPUID && (HAVE_AVX2 || HAVE_AVX512) */
 
 } // namespace
 
@@ -114,6 +131,35 @@ auto GetCPUInfo() -> std::optional<CPUInfo>
             ret.mCaps.set(CPUCap::SSE3);
         if(ret.mCaps.test(CPUCap::SSE3) and (cpuregs[2]&(1<<19)))
             ret.mCaps.set(CPUCap::SSE4_1);
+
+#if defined(CAN_GET_XCR0) && (HAVE_AVX2 || HAVE_AVX512)
+        /* AVX2 requires OS support for saving/restoring YMM state (OSXSAVE +
+         * XCR0 SSE+AVX bits), the AVX feature bit, and the AVX2 feature bit
+         * from leaf 7.
+         */
+        if(maxfunc >= 7 && (cpuregs[2]&(1<<27)) && (cpuregs[2]&(1<<28))
+            && (get_xcr0()&0x6) == 0x6)
+        {
+#if defined(HAVE_GCC_GET_CPUID)
+            auto eax7 = 0u, ebx7 = 0u, ecx7 = 0u, edx7 = 0u;
+            __get_cpuid_count(7, 0, &eax7, &ebx7, &ecx7, &edx7);
+            auto const avx2regs = ebx7;
+#elif defined(HAVE_CPUID_INTRINSIC) && defined(_MSC_VER)
+            auto regs7 = std::array<int,4>{};
+            (__cpuidex)(regs7.data(), 7, 0);
+            auto const avx2regs = static_cast<unsigned int>(regs7[1]);
+#endif
+            if((avx2regs&(1u<<5)))
+                ret.mCaps.set(CPUCap::AVX2);
+#if HAVE_AVX512
+            /* AVX512F additionally needs the OS to save/restore the opmask
+             * and ZMM state (XCR0 bits 5, 6, and 7).
+             */
+            if((avx2regs&(1u<<16)) && (get_xcr0()&0xe6) == 0xe6)
+                ret.mCaps.set(CPUCap::AVX512);
+#endif
+        }
+#endif /* CAN_GET_XCR0 && (HAVE_AVX2 || HAVE_AVX512) */
     }
 
 #else

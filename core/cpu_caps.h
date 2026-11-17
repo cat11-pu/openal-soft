@@ -8,7 +8,7 @@
 
 
 enum class CPUCap {
-    SSE, SSE2, SSE3, SSE4_1, NEON,
+    SSE, SSE2, SSE3, SSE4_1, NEON, AVX2, AVX512,
     Count
 };
 

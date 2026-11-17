@@ -127,6 +127,14 @@ auto SelectMixerOne() -> MixerOneFunc
 
 auto SelectHrtfMixer() -> HrtfMixerFunc
 {
+#if HAVE_AVX512
+    if(CPUCapFlags.test(CPUCap::AVX512))
+        return MixHrtf_AVX512;
+#endif
+#if HAVE_AVX2
+    if(CPUCapFlags.test(CPUCap::AVX2))
+        return MixHrtf_AVX2;
+#endif
 #if HAVE_NEON
     if(CPUCapFlags.test(CPUCap::NEON))
         return MixHrtf_NEON;
@@ -140,6 +148,10 @@ auto SelectHrtfMixer() -> HrtfMixerFunc
 
 auto SelectHrtfBlendMixer() -> HrtfMixerBlendFunc
 {
+#if HAVE_AVX2
+    if(CPUCapFlags.test(CPUCap::AVX2))
+        return MixHrtfBlend_AVX2;
+#endif
 #if HAVE_NEON
     if(CPUCapFlags.test(CPUCap::NEON))
         return MixHrtfBlend_NEON;
